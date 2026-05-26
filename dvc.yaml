@@ -30,8 +30,6 @@ stages:
   # ~a few secs
   prepare_open_trees:
     cmd:
-      - mkdir -p data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all
-      - cp -n data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/*.nwk data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/ 2>/dev/null || true
       - >-
         cd data/OZTreeBuild/${oz_tree} &&
         get_open_trees_from_one_zoom

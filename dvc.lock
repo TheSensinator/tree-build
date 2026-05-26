@@ -104,21 +104,18 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
       size: 1534894
       nfiles: 55
   prepare_open_trees:
     cmd:
-    - mkdir -p data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all
-    - cp -n data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/*.nwk 
-      data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/ 2>/dev/null || true
     - cd data/OZTreeBuild/AllLife && get_open_trees_from_one_zoom 
       ../../OpenTree/v16.1/draftversion.tre OpenTreeParts/OpenTree_all/ 
       BespokeTree/include_OT_v16.1/*.PHY
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
       size: 1534894
       nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
@@ -137,9 +134,9 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
       hash: md5
-      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
-      size: 81928129
-      nfiles: 229
+      md5: ed1333f8ed0fc9f2ca4315ce9cb3cc42.dir
+      size: 81927748
+      nfiles: 227
   download_eol:
     cmd:
     - curl -L -D data/EOL/.headers -o data/EOL/provider_ids.csv.gz 
