@@ -167,7 +167,7 @@ def get_OTT_list(tree, sources):
     tot = 0
     for node in tree.preorder_node_iter():
         tot += 1
-        node.data = {"parent": node.parent_node or None}
+        node.data = {}
         if node.label:
             node.label = node.label.replace("_", " ")
             m = ott_node.search(node.label)
