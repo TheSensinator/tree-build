@@ -21,13 +21,14 @@ import tempfile
 
 import requests
 
+OT_SSL_VERIFY = not os.environ.get("OT_SSL_VERIFY_DISABLE")
 SYNTHESIS_JSON_URL = (
     "https://raw.githubusercontent.com/OpenTreeOfLife/opentree" "/master/webapp/static/statistics/synthesis.json"
 )
 
 
 def fetch_synthesis_json():
-    response = requests.get(SYNTHESIS_JSON_URL)
+    response = requests.get(SYNTHESIS_JSON_URL, verify=OT_SSL_VERIFY)
     response.raise_for_status()
     return response.json()
 
@@ -58,7 +59,7 @@ def download_tree(version, output_dir):
         f"/output/labelled_supertree/labelled_supertree_simplified_ottnames.tre"
     )
     print(f"Downloading tree from {tree_url} ...")
-    response = requests.get(tree_url)
+    response = requests.get(tree_url, verify=OT_SSL_VERIFY)
     response.raise_for_status()
 
     raw_path = os.path.join(output_dir, "labelled_supertree_simplified_ottnames.tre")
@@ -78,7 +79,7 @@ def download_taxonomy(ott_version_raw, output_dir):
     ott_version = ott_version_raw.split("draft")[0]
     taxonomy_url = f"https://files.opentreeoflife.org/ott/{ott_version}/{ott_version}.tgz"
     print(f"Downloading taxonomy from {taxonomy_url} ...")
-    response = requests.get(taxonomy_url)
+    response = requests.get(taxonomy_url, verify=OT_SSL_VERIFY)
     response.raise_for_status()
 
     with tempfile.TemporaryDirectory() as tmpdir:
