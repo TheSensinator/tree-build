@@ -6,7 +6,7 @@ processes the nodes as they're read. It's designed to be fast.
 
 Nodes are returned in post-order (children before parent), which is the Newick order.
 
-For simplicity, it assumes that the tree string has no spaces.
+OTTs are assumed to be in the form ott123, separated by node-name with either a space or underscore.
 
 Here is a trivial example of how to use it:
 
@@ -28,6 +28,7 @@ import re
 __author__ = "David Ebbo"
 
 non_name_regex = re.compile(r"[,;:\(\)]")
+split_ott_regex = re.compile(r"^(.*)[_ ]ott(\d+)$")
 
 
 def parse_tree(newick_tree):
@@ -89,10 +90,10 @@ def parse_tree(newick_tree):
 
         if taxon:
             # Check if the taxon has an ott id, and if so, parse it out
-            if "_ott" in taxon:
-                ott_index = taxon.index("_ott")
-                ott = taxon[ott_index + 4 :]
-                taxon = taxon[:ott_index]
+            m = split_ott_regex.match(taxon)
+            if m:
+                ott = m.group(2)
+                taxon = m.group(1)
 
         yield {
             "taxon": taxon,
