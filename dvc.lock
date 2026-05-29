@@ -54,7 +54,7 @@ stages:
       md5: f021afa12f9d7c893412a0b2980ab187.dir
       size: 104535557
       nfiles: 13
-  filter_sql:
+  filter_wikipedia_sql:
     cmd: filter_wikipedia_sql data/Wiki/wp_SQL/enwiki-page.sql.gz 
       data/filtered/wikidata_titles.txt -o 
       data/filtered/OneZoom_enwiki-latest-page.sql
@@ -83,12 +83,13 @@ stages:
       md5: 87ff995e9d5028efc185857f34448746.dir
       size: 587064765
       nfiles: 3
-  add_ott_numbers:
+  add_ott_numbers_to_trees:
     cmd:
     - rm -rf data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
     - mkdir -p data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
     - add_ott_numbers_to_trees --savein 
-      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 
+      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 --output_info 
+      data/add_ott_numbers_to_trees.log 
       data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/
@@ -103,23 +104,20 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
-  prepare_open_trees:
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
+      size: 1534894
+      nfiles: 55
+  get_open_trees_from_one_zoom:
     cmd:
-    - mkdir -p data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all
-    - cp -n data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/*.nwk 
-      data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/ 2>/dev/null || true
     - cd data/OZTreeBuild/AllLife && get_open_trees_from_one_zoom 
       ../../OpenTree/v16.1/draftversion.tre OpenTreeParts/OpenTree_all/ 
       BespokeTree/include_OT_v16.1/*.PHY
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
+      size: 1534894
+      nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
       hash: md5
       md5: 81be05fde561126fb58b7bb7e8a0fbcd.dir
@@ -136,9 +134,9 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
       hash: md5
-      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
-      size: 81928129
-      nfiles: 229
+      md5: ed1333f8ed0fc9f2ca4315ce9cb3cc42.dir
+      size: 81927748
+      nfiles: 227
   download_eol:
     cmd:
     - curl -L -D data/EOL/.headers -o data/EOL/provider_ids.csv.gz 
@@ -174,7 +172,7 @@ stages:
       hash: md5
       md5: f7c9bb8374957c07168bec36d6591347
       size: 221682224
-  build_tree:
+  build_oz_tree:
     cmd:
     - cd data/OZTreeBuild/AllLife && build_oz_tree 
       BespokeTree/include_OT_v16.1/Base.PHY OpenTreeParts/OpenTree_all/ 
@@ -182,14 +180,14 @@ stages:
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
+      size: 1534894
+      nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
       hash: md5
-      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
-      size: 81928129
-      nfiles: 229
+      md5: ed1333f8ed0fc9f2ca4315ce9cb3cc42.dir
+      size: 81927748
+      nfiles: 227
     params:
       params.yaml:
         ot_version: v16.1
@@ -199,7 +197,7 @@ stages:
       hash: md5
       md5: 0b17680b0a0a633f8ae50e4a8f68f17a
       size: 83061022
-  create_tables:
+  CSV_base_table_creator:
     cmd:
     - mkdir -p data/output_files
     - CSV_base_table_creator data/OZTreeBuild/AllLife/AllLife_full_tree.phy 
@@ -210,7 +208,7 @@ stages:
       --version 28017344 --exclude Archosauria_ott335588 Dinosauria_ott90215 
       --extra_source_file 
       data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv 2> 
-      data/output_files/ordered_output.log
+      data/CSV_base_table_creator.log
     deps:
     - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
       hash: md5
@@ -251,26 +249,26 @@ stages:
     outs:
     - path: data/output_files/
       hash: md5
-      md5: 80b98cbf1167374064c0fdf6f4cec926.dir
-      size: 1182677604
-      nfiles: 8
-  make_js:
+      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
+      size: 1158499655
+      nfiles: 7
+  make_js_treefiles:
     cmd:
     - mkdir -p data/js_output
     - make_js_treefiles --outdir data/js_output
     deps:
     - path: data/output_files/
       hash: md5
-      md5: 80b98cbf1167374064c0fdf6f4cec926.dir
-      size: 1182677604
-      nfiles: 8
+      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
+      size: 1158499655
+      nfiles: 7
     outs:
     - path: data/js_output/
       hash: md5
-      md5: b6808a7ee61a8b566f757ed5dca39a46.dir
-      size: 8293094
+      md5: 9782411b79a64d6da09afacae2f3f047.dir
+      size: 8297912
       nfiles: 6
-  discover_wikidata_url:
+  discover_latest_wikidata_dump_url:
     cmd: discover_latest_wikidata_dump_url > 
       data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
     outs:
@@ -278,7 +276,7 @@ stages:
       hash: md5
       md5: e094b0f57c0c14e1016842c2dac5482e
       size: 90
-  discover_enwiki_sql_url:
+  discover_latest_enwiki_sql_url:
     cmd: discover_latest_enwiki_sql_url > 
       data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
     outs:

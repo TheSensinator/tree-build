@@ -53,7 +53,7 @@ def get_inclusions_and_exclusions_from_one_zoom_file(file, all_included_otts, al
 
     for result in enumerate_one_zoom_tokens(tree):
         # Check if the result has a base ott (won't have it if it's inserting another OZ file)
-        if "base_ott" in result:
+        if result.get("base_ott") is not None:
             all_included_otts.add(result["base_ott"])
             all_excluded_otts.update(result["excluded_otts"])
 
@@ -72,6 +72,7 @@ def extract_trees_from_open_tree_file(open_tree_file, output_dir, all_included_o
     logging.info(f"Extracted {len(trees)} trees from Open Tree file")
 
     # Save each tree to a file named after the taxon
+    os.makedirs(output_dir, exist_ok=True)
     for ott, tree in trees.items():
         file = os.path.join(output_dir, ott + ".phy")
         logging.debug(f"Writing file: {file}")

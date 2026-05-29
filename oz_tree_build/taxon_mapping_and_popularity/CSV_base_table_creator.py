@@ -131,7 +131,24 @@ def get_OTT_species(taxonomy_filename):
     return species_list
 
 
-def get_tree_and_OTT_list(tree_filename, sources):
+def parse_tree(tree_filename):
+    """
+    Parses (tree_filename) and returns the DendroPy tree object
+    """
+    try:
+        tree = Tree.get_from_path(
+            tree_filename,
+            schema="newick",
+            preserve_underscores=True,
+            suppress_leaf_node_taxa=True,
+        )
+        return tree
+    except Exception as e:
+        sys.exit("Problem reading tree from " + tree_filename + ": " + str(e))
+    logging.info(" > read tree from " + tree_filename)
+
+
+def get_OTT_list(tree, sources):
     """
     Takes a base tree and creates objects for each node and leaf, attaching them as 'data'
     dictionaries to each node in the DendroPy tree. Nodes and leaves with an OTT id also
@@ -143,17 +160,6 @@ def get_tree_and_OTT_list(tree_filename, sources):
     """
     indexed_by_ott = {}
 
-    try:
-        tree = Tree.get_from_path(
-            tree_filename,
-            schema="newick",
-            preserve_underscores=True,
-            suppress_leaf_node_taxa=True,
-        )
-    except Exception as e:
-        sys.exit("Problem reading tree from " + tree_filename + ": " + str(e))
-    logging.info(" > read tree from " + tree_filename)
-
     ott_node = re.compile(r"(.*) ott(\d+)(@\d*)?$")  # matches the OTT number
     mrca_ott_node = re.compile(
         r"(.*) (mrcaott\d+ott\d+)(@\d*)?$"
@@ -161,7 +167,7 @@ def get_tree_and_OTT_list(tree_filename, sources):
     tot = 0
     for node in tree.preorder_node_iter():
         tot += 1
-        node.data = {"parent": node.parent_node or None}
+        node.data = {}
         if node.label:
             node.label = node.label.replace("_", " ")
             m = ott_node.search(node.label)
@@ -209,7 +215,7 @@ def get_tree_and_OTT_list(tree_filename, sources):
         f"✔ extracted {len(indexed_by_ott)} otts from {tot} leaves & nodes. "
         f"Mem usage {OTT_popularity_mapping.mem():.1f} Mb"
     )
-    return tree, indexed_by_ott
+    return indexed_by_ott
 
 
 def add_eol_IDs_from_EOL_table_dump(source_ptrs, identifiers_filename, source_mapping):
@@ -958,7 +964,8 @@ def process_all(args):
     # the ids for these sources may not be numbers (e.g. Silva has things like D11377/#1
 
     logging.info("> Creating tree structure")
-    tree, OTT_ptrs = get_tree_and_OTT_list(args.Tree, sources)
+    tree = parse_tree(args.Tree)
+    OTT_ptrs = get_OTT_list(tree, sources)
 
     logging.info("> Adding source IDs")
     source_ptrs = OTT_popularity_mapping.create_from_taxonomy(

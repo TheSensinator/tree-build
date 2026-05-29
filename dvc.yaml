@@ -10,13 +10,14 @@ stages:
       - data/OpenTree/${ot_version}/
 
   # ~20 secs
-  add_ott_numbers:
+  add_ott_numbers_to_trees:
     cmd:
       - rm -rf data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
       - mkdir -p data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
       - >-
         add_ott_numbers_to_trees
         --savein data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
+        --output_info data/add_ott_numbers_to_trees.log
         data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
     deps:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/
@@ -27,10 +28,8 @@ stages:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}/
 
   # ~a few secs
-  prepare_open_trees:
+  get_open_trees_from_one_zoom:
     cmd:
-      - mkdir -p data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all
-      - cp -n data/OZTreeBuild/${oz_tree}/OpenTreeParts/OT_required/*.nwk data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/ 2>/dev/null || true
       - >-
         cd data/OZTreeBuild/${oz_tree} &&
         get_open_trees_from_one_zoom
@@ -47,7 +46,7 @@ stages:
     outs:
       - data/OZTreeBuild/${oz_tree}/OpenTreeParts/OpenTree_all/
 
-  build_tree:
+  build_oz_tree:
     cmd:
       - >-
         cd data/OZTreeBuild/${oz_tree} &&
@@ -92,7 +91,7 @@ stages:
     outs:
       - data/filtered/OneZoom_provider_ids.csv
 
-  discover_wikidata_url:
+  discover_latest_wikidata_dump_url:
     cmd: >-
       discover_latest_wikidata_dump_url > data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
     outs:
@@ -119,7 +118,7 @@ stages:
     outs:
       - data/filtered/wikidata_titles.txt
 
-  discover_enwiki_sql_url:
+  discover_latest_enwiki_sql_url:
     cmd: >-
       discover_latest_enwiki_sql_url > data/Wiki/wp_SQL/enwiki-page-sql-gz-url.txt
     outs:
@@ -134,7 +133,7 @@ stages:
     outs:
       - data/Wiki/wp_SQL/enwiki-page.sql.gz
 
-  filter_sql:
+  filter_wikipedia_sql:
     cmd: >-
       filter_wikipedia_sql
       data/Wiki/wp_SQL/enwiki-page.sql.gz
@@ -160,7 +159,7 @@ stages:
           persist: true
 
   # ~10 mins
-  create_tables:
+  CSV_base_table_creator:
     cmd:
       - mkdir -p data/output_files
       - >-
@@ -175,7 +174,7 @@ stages:
         --version ${build_version}
         --exclude ${exclude_from_popularity}
         --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
-        2> data/output_files/ordered_output.log
+        2> data/CSV_base_table_creator.log
     deps:
       - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
       - data/OpenTree/${ot_version}/taxonomy.tsv
@@ -192,7 +191,7 @@ stages:
     outs:
       - data/output_files/
 
-  make_js:
+  make_js_treefiles:
     cmd:
       - mkdir -p data/js_output
       - make_js_treefiles --outdir data/js_output

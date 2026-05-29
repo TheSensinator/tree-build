@@ -41,6 +41,43 @@ def test_full_parse_result():
     ]
 
 
+def test_ott_spaces():
+    node_list = list(parse_tree("(A ott123,B ott5 om ott456:5.9)C;"))
+    assert node_list == [
+        {
+            "depth": 1,
+            "edge_length": 0.0,
+            "end": 9,
+            "full_name_start_index": 1,
+            "is_leaf": True,
+            "ott": "123",
+            "start": 1,
+            "taxon": "A",
+        },
+        {
+            "depth": 1,
+            "edge_length": 5.9,
+            "end": 30,
+            "full_name_start_index": 10,
+            "is_leaf": True,
+            "ott": "456",
+            "start": 10,
+            # NB: mid-string ott doesn't throw us off
+            "taxon": "B ott5 om",
+        },
+        {
+            "depth": 0,
+            "edge_length": 0.0,
+            "end": 32,
+            "full_name_start_index": 31,
+            "is_leaf": False,
+            "ott": None,
+            "start": 0,
+            "taxon": "C",
+        },
+    ]
+
+
 def test_quoted_taxa():
     node_list = list(parse_tree("('Abc/def_ott123','qw e$r&ty':1.2)'C_*(ot)t789_ott987':5.5;"))
     assert node_list[0]["taxon"] == "Abc/def"
