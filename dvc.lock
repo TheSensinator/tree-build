@@ -88,7 +88,8 @@ stages:
     - rm -rf data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
     - mkdir -p data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1
     - add_ott_numbers_to_trees --savein 
-      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 
+      data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1 --output_info 
+      data/add_ott_numbers_to_trees.log 
       data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_noAutoOTT/
@@ -103,9 +104,9 @@ stages:
     outs:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
+      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      size: 1534894
+      nfiles: 55
   prepare_open_trees:
     cmd:
     - mkdir -p data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all
@@ -117,9 +118,9 @@ stages:
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
+      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      size: 1534894
+      nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OT_required/
       hash: md5
       md5: 81be05fde561126fb58b7bb7e8a0fbcd.dir
@@ -182,9 +183,9 @@ stages:
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 3981ca3104e6e42846f0dca4dae932d4.dir
-      size: 1805911
-      nfiles: 56
+      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      size: 1534894
+      nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
       hash: md5
       md5: 3f8df65320201c2db0ee35b17916c7cb.dir
@@ -210,7 +211,7 @@ stages:
       --version 28017344 --exclude Archosauria_ott335588 Dinosauria_ott90215 
       --extra_source_file 
       data/OZTreeBuild/AllLife/BespokeTree/SupplementaryTaxonomy.tsv 2> 
-      data/output_files/ordered_output.log
+      data/CSV_base_table_creator.log
     deps:
     - path: data/OZTreeBuild/AllLife/AllLife_full_tree.phy
       hash: md5
@@ -251,9 +252,9 @@ stages:
     outs:
     - path: data/output_files/
       hash: md5
-      md5: 80b98cbf1167374064c0fdf6f4cec926.dir
-      size: 1182677604
-      nfiles: 8
+      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
+      size: 1158499655
+      nfiles: 7
   make_js:
     cmd:
     - mkdir -p data/js_output

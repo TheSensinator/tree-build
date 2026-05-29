@@ -54,8 +54,7 @@ def main():
     )
     parser.add_argument(
         "--output_info",
-        default="info_about_matches.txt",
-        help="file in --savein to save info about matches. If no --savein, print to stdout",
+        help="file to save info about matches. If not provided, print to stdout",
     )
     parser.add_argument(
         "--symlink",
@@ -83,8 +82,8 @@ def main():
                     f"Could not create dir to save files {args.savein}: " f"I/O error({e.errno}): {e.strerror}",
                     file=sys.stderr,
                 )
-        if args.output_info and args.output_info != "":
-            outinfo = open(os.path.join(args.savein, args.output_info), mode="w")
+        if args.output_info:
+            outinfo = open(args.output_info, mode="w")
 
     def lookup_OTT(name_node_dict, context):
         """

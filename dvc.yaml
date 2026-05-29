@@ -17,6 +17,7 @@ stages:
       - >-
         add_ott_numbers_to_trees
         --savein data/OZTreeBuild/${oz_tree}/BespokeTree/include_OT_${ot_version}
+        --output_info data/add_ott_numbers_to_trees.log
         data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/*.[pP][hH][yY]
     deps:
       - data/OZTreeBuild/${oz_tree}/BespokeTree/include_noAutoOTT/
@@ -175,7 +176,7 @@ stages:
         --version ${build_version}
         --exclude ${exclude_from_popularity}
         --extra_source_file data/OZTreeBuild/${oz_tree}/BespokeTree/SupplementaryTaxonomy.tsv
-        2> data/output_files/ordered_output.log
+        2> data/CSV_base_table_creator.log
     deps:
       - data/OZTreeBuild/${oz_tree}/${oz_tree}_full_tree.phy
       - data/OpenTree/${ot_version}/taxonomy.tsv
