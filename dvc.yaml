@@ -197,5 +197,4 @@ stages:
       - make_js_treefiles --outdir data/js_output
     deps:
       - data/output_files/
-    outs:
-      - data/js_output/
+    always_changed: true
