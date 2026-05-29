@@ -180,14 +180,14 @@ stages:
     deps:
     - path: data/OZTreeBuild/AllLife/BespokeTree/include_OT_v16.1/
       hash: md5
-      md5: 1fd63d0d2cc6c82727734eaa0757ab1a.dir
+      md5: cfe57e6fbd3572028ac2d83203a96fe4.dir
       size: 1534894
       nfiles: 55
     - path: data/OZTreeBuild/AllLife/OpenTreeParts/OpenTree_all/
       hash: md5
-      md5: 3f8df65320201c2db0ee35b17916c7cb.dir
-      size: 81928129
-      nfiles: 229
+      md5: ed1333f8ed0fc9f2ca4315ce9cb3cc42.dir
+      size: 81927748
+      nfiles: 227
     params:
       params.yaml:
         ot_version: v16.1
@@ -259,14 +259,14 @@ stages:
     deps:
     - path: data/output_files/
       hash: md5
-      md5: 80b98cbf1167374064c0fdf6f4cec926.dir
-      size: 1182677604
-      nfiles: 8
+      md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
+      size: 1158499655
+      nfiles: 7
     outs:
     - path: data/js_output/
       hash: md5
-      md5: b6808a7ee61a8b566f757ed5dca39a46.dir
-      size: 8293094
+      md5: 9782411b79a64d6da09afacae2f3f047.dir
+      size: 8297912
       nfiles: 6
   discover_latest_wikidata_dump_url:
     cmd: discover_latest_wikidata_dump_url > 
