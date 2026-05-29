@@ -262,12 +262,6 @@ stages:
       md5: 81dfa9c3747bbe94c57161cc8e22d5c9.dir
       size: 1158499655
       nfiles: 7
-    outs:
-    - path: data/js_output/
-      hash: md5
-      md5: 9782411b79a64d6da09afacae2f3f047.dir
-      size: 8297912
-      nfiles: 6
   discover_latest_wikidata_dump_url:
     cmd: discover_latest_wikidata_dump_url > 
       data/Wiki/wd_JSON/latest-all-json-bz2-url.txt
