@@ -31,7 +31,10 @@ Usage examples:
 
     python -m oz_tree_build.images_and_vernaculars.get_inat_images clade \
         OneZoom_latest-all.json 563151 --image-source metadata \
-        --inat-db-uri postgres://user:password@localhost/inaturalist-open-data
+        --inat-duckdb-path data/iNaturalist/inaturalist.duckdb
+
+    python -m oz_tree_build.images_and_vernaculars.get_inat_images stats \
+        --inat-duckdb-path data/iNaturalist/inaturalist.duckdb
 """
 
 import argparse
@@ -45,9 +48,9 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
+import duckdb
 import requests
 from PIL import Image
-from pydal import DAL
 
 from .._OZglobals import src_flags
 from ..utilities.db_helper import (
@@ -68,6 +71,13 @@ logger = logging.getLogger(Path(__file__).name)
 # because OneZoom usage may not be strictly non-commercial in every context.
 ALLOWED_INAT_PHOTO_LICENSES = frozenset({"cc0", "cc-by", "cc-by-sa"})
 ALLOWED_INAT_PHOTO_LICENSES_SQL = tuple(sorted(ALLOWED_INAT_PHOTO_LICENSES))
+# SQL predicate used against the iNaturalist metadata dump. Keep it aligned
+# with normalise_inat_license()/is_allowed_inat_license(), but do the cheap
+# filtering inside DuckDB so the full dump does not have to be loaded into
+# Python. Non-commercial and no-derivatives variants are deliberately excluded.
+INAT_USABLE_LICENSE_SQL = """
+    normalized_license IN ('cc0', 'cc-by', 'cc-by-sa')
+"""
 
 INAT_SRC = src_flags["inat"]
 DEFAULT_INAT_IMAGE_RATING = 34000
@@ -96,7 +106,7 @@ def normalise_inat_license(license_code):
         return "cc0"
     # iNaturalist metadata sometimes stores an upper-case code, and API values
     # sometimes include version suffixes. Keep only the family we explicitly allow.
-    for allowed in ALLOWED_INAT_PHOTO_LICENSES:
+    for allowed in sorted(ALLOWED_INAT_PHOTO_LICENSES, key=len, reverse=True):
         if normalized == allowed or normalized.startswith(allowed + "-"):
             return allowed
     return normalized
@@ -340,21 +350,25 @@ def get_best_photo_from_inat_api(inat_taxon_id, *, per_page=DEFAULT_API_PER_PAGE
     return max(candidates, key=score_candidate)
 
 
-def connect_to_metadata_database(metadata_db_uri):
-    """Connect to the local iNaturalist metadata database."""
-    if not metadata_db_uri:
-        raise ValueError("metadata_db_uri is required for --image-source metadata")
-    return DAL(metadata_db_uri)
+def connect_to_metadata_database(metadata_db_path):
+    """Connect to the local iNaturalist DuckDB metadata database."""
+    if not metadata_db_path:
+        raise ValueError("--inat-duckdb-path is required for --image-source metadata and stats")
+    return duckdb.connect(str(metadata_db_path), read_only=True)
 
 
-def get_inat_metadata_db_uri(config, args):
-    if args.inat_db_uri:
-        return args.inat_db_uri
+def get_inat_metadata_db_path(config, args):
+    if args.inat_duckdb_path:
+        return args.inat_duckdb_path
     if config.has_section("inat"):
-        for key in ("metadata_uri", "metadata_db_uri", "uri"):
+        for key in ("duckdb_path", "metadata_duckdb_path", "metadata_db_path", "metadata_uri", "metadata_db_uri", "uri"):
             if config.has_option("inat", key):
                 return config.get("inat", key)
     return None
+
+
+def run_duckdb_query(inat_db, sql, params=None):
+    return inat_db.execute(sql, params or ()).fetchall()
 
 
 def rows_to_dicts(columns, rows):
@@ -369,7 +383,6 @@ def get_best_photo_from_metadata_db(inat_db, inat_taxon_id, *, image_size=DEFAUL
     It is the scalable fallback: research-grade, allowed licence, first photo
     position, then largest image.
     """
-    s = placeholder(inat_db)
     columns = [
         "photo_id",
         "extension",
@@ -384,36 +397,49 @@ def get_best_photo_from_metadata_db(inat_db, inat_taxon_id, *, image_size=DEFAUL
         "observer_name",
     ]
     sql = f"""
+    WITH candidate_photos AS (
+        SELECT
+            p.photo_id,
+            p.extension,
+            p.license,
+            LOWER(REPLACE(COALESCE(p.license, ''), '_', '-')) AS normalized_license,
+            p.width,
+            p.height,
+            p.position,
+            obs.observation_uuid,
+            obs.quality_grade,
+            obs.observed_on,
+            o.login AS observer_login,
+            o.name AS observer_name
+        FROM observations obs
+        JOIN photos p ON obs.observation_uuid = p.observation_uuid
+        LEFT JOIN observers o ON p.observer_id = o.observer_id
+        WHERE obs.taxon_id = ?
+          AND LOWER(obs.quality_grade) IN ('research', 'research grade')
+          AND p.photo_id IS NOT NULL
+          AND p.extension IS NOT NULL
+    )
     SELECT
-        p.photo_id,
-        p.extension,
-        p.license,
-        p.width,
-        p.height,
-        p.position,
-        obs.observation_uuid,
-        obs.quality_grade,
-        obs.observed_on,
-        o.login AS observer_login,
-        o.name AS observer_name
-    FROM observations obs
-    JOIN photos p ON obs.observation_uuid = p.observation_uuid
-    LEFT JOIN observers o ON p.observer_id = o.observer_id
-    WHERE obs.taxon_id = {s}
-      AND LOWER(p.license) IN ({s},{s},{s})
-      AND LOWER(obs.quality_grade) IN ('research', 'research grade')
-      AND p.photo_id IS NOT NULL
-      AND p.extension IS NOT NULL
+        photo_id,
+        extension,
+        license,
+        width,
+        height,
+        position,
+        observation_uuid,
+        quality_grade,
+        observed_on,
+        observer_login,
+        observer_name
+    FROM candidate_photos
+    WHERE {INAT_USABLE_LICENSE_SQL}
     ORDER BY
-      COALESCE(p.position, 9999) ASC,
-      (COALESCE(p.width, 0) * COALESCE(p.height, 0)) DESC,
-      p.photo_id ASC
+      COALESCE(position, 9999) ASC,
+      (COALESCE(width, 0) * COALESCE(height, 0)) DESC,
+      photo_id ASC
     LIMIT 1;
     """
-    rows = rows_to_dicts(
-        columns,
-        inat_db.executesql(sql, (inat_taxon_id, *ALLOWED_INAT_PHOTO_LICENSES_SQL)),
-    )
+    rows = rows_to_dicts(columns, run_duckdb_query(inat_db, sql, (inat_taxon_id,)))
     if not rows:
         return None
     row = rows[0]
@@ -452,6 +478,60 @@ def get_best_photo(inat_taxon_id, *, image_source, inat_db=None, per_page=DEFAUL
             raise ValueError("inat_db must be provided for metadata image source")
         return get_best_photo_from_metadata_db(inat_db, inat_taxon_id, image_size=image_size)
     raise ValueError(f"Unknown image_source: {image_source}")
+
+
+def get_usable_photo_species_stats(inat_db):
+    """Return counts of iNaturalist species that have at least one usable photo."""
+    columns = [
+        "inat_species",
+        "inat_species_with_usable_photos",
+        "inat_species_with_research_grade_usable_photos",
+    ]
+    sql = f"""
+    WITH photo_observations AS (
+        SELECT
+            obs.taxon_id,
+            obs.quality_grade,
+            LOWER(REPLACE(COALESCE(p.license, ''), '_', '-')) AS normalized_license
+        FROM observations obs
+        JOIN photos p ON obs.observation_uuid = p.observation_uuid
+        WHERE p.photo_id IS NOT NULL
+    ),
+    species_taxa AS (
+        SELECT taxon_id
+        FROM taxa
+        WHERE LOWER(rank) = 'species'
+    ),
+    usable_species AS (
+        SELECT DISTINCT po.taxon_id
+        FROM photo_observations po
+        JOIN species_taxa st ON po.taxon_id = st.taxon_id
+        WHERE {INAT_USABLE_LICENSE_SQL}
+    ),
+    usable_research_grade_species AS (
+        SELECT DISTINCT po.taxon_id
+        FROM photo_observations po
+        JOIN species_taxa st ON po.taxon_id = st.taxon_id
+        WHERE {INAT_USABLE_LICENSE_SQL}
+          AND LOWER(po.quality_grade) IN ('research', 'research grade')
+    )
+    SELECT
+        (SELECT COUNT(*) FROM species_taxa) AS inat_species,
+        (SELECT COUNT(*) FROM usable_species) AS inat_species_with_usable_photos,
+        (SELECT COUNT(*) FROM usable_research_grade_species) AS inat_species_with_research_grade_usable_photos;
+    """
+    rows = rows_to_dicts(columns, run_duckdb_query(inat_db, sql))
+    return rows[0] if rows else dict.fromkeys(columns, 0)
+
+
+def print_usable_photo_species_stats(inat_db):
+    stats = get_usable_photo_species_stats(inat_db)
+    print(f"iNaturalist species: {stats['inat_species']:,}")
+    print(f"iNaturalist species with >=1 usable photo: {stats['inat_species_with_usable_photos']:,}")
+    print(
+        "iNaturalist species with >=1 usable research-grade photo: "
+        f"{stats['inat_species_with_research_grade_usable_photos']:,}"
+    )
 
 
 def safe_src_id(candidate):
@@ -711,8 +791,18 @@ def process_clade(
 
 
 def process_args(args):
-    outdir = args.output_dir
     config = read_config(args.conf_file)
+
+    if args.subcommand == "stats":
+        inat_db_path = get_inat_metadata_db_path(config, args)
+        inat_db = connect_to_metadata_database(inat_db_path)
+        try:
+            print_usable_photo_species_stats(inat_db)
+        finally:
+            inat_db.close()
+        return
+
+    outdir = args.output_dir
     database = config.get("db", "uri")
 
     if outdir is None:
@@ -726,8 +816,8 @@ def process_args(args):
 
     inat_db = None
     if args.image_source == "metadata":
-        inat_db_uri = get_inat_metadata_db_uri(config, args)
-        inat_db = connect_to_metadata_database(inat_db_uri)
+        inat_db_path = get_inat_metadata_db_path(config, args)
+        inat_db = connect_to_metadata_database(inat_db_path)
 
     taxa_data = {}
     if args.taxa_data_file:
@@ -820,11 +910,13 @@ def main():
                 "api = use iNaturalist API ordered by votes; metadata = use local Open Data metadata DB. "
                 "Metadata mode cannot rank by votes because the dump does not include vote counts."
             ),
-        )
+
         subparser.add_argument(
+            "--inat-duckdb-path",
             "--inat-db-uri",
+            dest="inat_duckdb_path",
             default=None,
-            help="pydal URI for local iNaturalist metadata DB, e.g. postgres://user:password@host/inaturalist-open-data",
+            help="Path to local iNaturalist DuckDB metadata DB, e.g. data/iNaturalist/inaturalist.duckdb",
         )
         subparser.add_argument("--api-per-page", type=int, default=DEFAULT_API_PER_PAGE)
         subparser.add_argument("--image-size", choices=("medium", "large"), default=DEFAULT_IMAGE_SIZE)
@@ -839,6 +931,18 @@ def main():
     parser_clade.add_argument("wd_dump", type=str, help="Filtered Wikidata JSON dump containing P3151 claims")
     parser_clade.add_argument("ott_or_taxa", nargs="+", type=str, help="Root node OTT or name")
     add_common_args(parser_clade)
+
+    parser_stats = subparsers.add_parser("stats", help="Print usable-photo species counts from the iNaturalist DuckDB metadata DB")
+    parser_stats.add_argument("-v", "--verbosity", action="count", default=0)
+    parser_stats.add_argument("-q", "--quiet", action="count", default=0)
+    parser_stats.add_argument("-c", "--conf-file", default=None, help=f"The configuration file. Defaults to {default_appconfig}")
+    parser_stats.add_argument(
+        "--inat-duckdb-path",
+        "--inat-db-uri",
+        dest="inat_duckdb_path",
+        default=None,
+        help="Path to local iNaturalist DuckDB metadata DB, e.g. data/iNaturalist/inaturalist.duckdb",
+    )
 
     args = parser.parse_args()
     if not args.subcommand:
